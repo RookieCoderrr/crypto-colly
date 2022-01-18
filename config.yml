@@ -1,0 +1,11 @@
+
+mongo_local:
+  host: "127.0.0.1"
+  # host: "docker.for.mac.host.internal"
+  port: "27017"
+  dbname: "crypto"
+  database: "crypto"
+
+
+
+
