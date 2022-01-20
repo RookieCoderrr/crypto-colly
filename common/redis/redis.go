@@ -79,11 +79,11 @@ func (r *Redis) Test(){
 		return
 	}
 
-	k, err := redis.Int(conn.Do("Get", "abc"))
+	_, err = redis.Int(conn.Do("Get", "abc"))
 	if err != nil {
 		fmt.Println("get abc faild :",err)
 		return
 	}
-	fmt.Println(k)
+	fmt.Println("======initialize redis successfully======")
 	defer conn.Close()
 }

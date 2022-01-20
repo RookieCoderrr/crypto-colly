@@ -19,7 +19,6 @@ import (
 
 const (
 	ProcessBlockHeightPrefix = "process_block_height_"
-	NotifyWatchKey           = "PUBSUB_WATCH"
 )
 
 type RecordBlock struct {
@@ -34,7 +33,6 @@ type RecordBlock struct {
 	startTime          time.Time
 }
 func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis) *RecordBlock{
-	fmt.Println("newRecordBlock")
 	return &RecordBlock{
 		chain: chain,
 		db: db,
@@ -47,22 +45,26 @@ func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis) *Re
 
 }
 func (r *RecordBlock) Do(){
-	fmt.Println("do")
+	fmt.Println("======开始记录区块======")
 	client, err := ethclient.Dial(r.chain.RPC)
 	if err != nil {
-		fmt.Sprintf("连接(%s)[%s]失败: %s\n", r.chain.Name, r.chain.RPC, err)
+		output := fmt.Sprintf("连接(%s)[%s]失败: %s\n", r.chain.Name, r.chain.RPC, err)
+		fmt.Println(output)
 		return
 	}
 	r.client = client
 
-	fmt.Sprintf("连接(%s)[%s]成功\n", r.chain.Name, r.chain.RPC)
+	output := fmt.Sprintf("连接(%s)[%s]成功\n", r.chain.Name, r.chain.RPC)
+	fmt.Println(output)
 	lastProcessBlockHeight, err := r.getProcessedBlockHeight()
 	if err != nil {
-		fmt.Sprintf("(%s)获取上次处理块高失败: %s\n", r.chain.Name, err)
+		output = fmt.Sprintf("(%s)获取上次处理块高失败: %s\n", r.chain.Name, err)
+		fmt.Println(output)
 		return
 	}
 	r.processBlockHeight = lastProcessBlockHeight
-	fmt.Sprintf("(%s)开始爬取合约，上次处理块高: %s\n", r.chain.Name, lastProcessBlockHeight.String())
+	output = fmt.Sprintf("(%s)开始爬取合约，上次处理块高: %s\n", r.chain.Name, lastProcessBlockHeight.String())
+	fmt.Println(output)
 
 	go r.autoGetCurrentBlockHeight()
 	r.autoCrawl()
@@ -88,7 +90,6 @@ func (r *RecordBlock) getProcessedBlockHeight() (*big.Int, error) {
 }
 
 func (r *RecordBlock) autoGetCurrentBlockHeight() {
-	fmt.Println("autoGetCurrentBlockHeight")
 	tick := time.Tick(3 * time.Second)
 	for {
 		select {
@@ -101,21 +102,20 @@ func (r *RecordBlock) autoGetCurrentBlockHeight() {
 func (r *RecordBlock) getCurrentBlockHeight() {
 	header, err := r.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		fmt.Sprintf("(%s)获取当前块高失败: %s\n", r.chain.Name, err)
+		output := fmt.Sprintf("(%s)获取当前块高失败: %s\n", r.chain.Name, err)
+		fmt.Println(output)
 		return
 	}
 
 	r.currentBlockHeight = header.Number
-	//fmt.Println(r.currentBlockHeight)
-
 	var diff = new(big.Int).Sub(r.currentBlockHeight, r.processBlockHeight)
 	if diff.Cmp(big.NewInt(10)) > 0 {
-		fmt.Sprintf("(%s)待处理: %s 块\n", r.chain.Name, diff.String())
+		output := fmt.Sprintf("(%s)待处理: %s 块\n", r.chain.Name, diff.String())
+		fmt.Println(output)
 	}
 }
 
 func (r *RecordBlock) autoCrawl() {
-	fmt.Println("autoCrawl")
 	tick := time.Tick(3 * time.Second)
 	for {
 		select {
@@ -132,17 +132,20 @@ func (r *RecordBlock) crawl() {
 	for {
 		block, err := r.client.BlockByNumber(context.Background(), r.processBlockHeight)
 		if err != nil {
-			fmt.Sprintf("(%s)[%d]获取块数据失败: %s\n", r.chain.Name, r.processBlockHeight, err)
+			output := fmt.Sprintf("(%s)[%d]获取块数据失败: %s\n", r.chain.Name, r.processBlockHeight, err)
+			fmt.Println(output)
 			break
 		}
+		output := fmt.Sprintf("BlockHash: %s",block.Hash())
+		fmt.Println(output)
+		fmt.Print("BlockTransactions:")
 		fmt.Println(block.Transactions())
-		fmt.Println(block.Hash())
-
 		for _, tx := range block.Transactions() {
-			fmt.Println("transaction")
+			output := fmt.Sprintf("Checking transaction: %s",tx.Data())
+			fmt.Println(output)
 			// 试试这个， to为空就当是合约判断
 			if tx.To() == nil {
-				fmt.Println("==============================================================================================")
+				fmt.Println("==============================================Satisfy Standard================================================")
 				err := r.analyzeTx(tx)
 				if err != nil {
 					continue
@@ -166,7 +169,8 @@ func (r *RecordBlock) crawl() {
 		}
 
 		r.processBlockHeight = new(big.Int).Add(r.processBlockHeight, big.NewInt(1))
-		fmt.Println(r.processBlockHeight)
+		output = fmt.Sprintf("Block height : %d",r.processBlockHeight)
+		fmt.Println(output)
 		if r.processBlockHeight.Cmp(r.currentBlockHeight) > 0 {
 			break
 		}
@@ -183,7 +187,8 @@ func (r *RecordBlock) analyzeTx(tx *types.Transaction) error {
 	fmt.Println("analyzeTx")
 	receipt, err := r.client.TransactionReceipt(context.Background(), tx.Hash())
 	if err != nil {
-		fmt.Sprintf("(%s)[%d]解析交易失败(%s): %s\n", r.chain.Name, r.processBlockHeight, tx.Hash().Hex(), err)
+		output := fmt.Sprintf("(%s)[%d]解析交易失败(%s): %s\n", r.chain.Name, r.processBlockHeight, tx.Hash().Hex(), err)
+		fmt.Println(output)
 		return err
 	}
 
@@ -191,10 +196,12 @@ func (r *RecordBlock) analyzeTx(tx *types.Transaction) error {
 	//receipt, err := bind.WaitMined(context.Background(), a.client, tx)
 
 	if receipt.ContractAddress.Hex() != "0x0000000000000000000000000000000000000000" {
+		fmt.Println("======================================================Success==============================================================")
 		ercType, err := chainutils.JudgmentErcType(receipt.ContractAddress, r.client)
 		if err != nil {
-			fmt.Sprintf("(%s)[%d]判断合约类型失败(tx: %s, contract: %s): %s\n", r.chain.Name,
+			output := fmt.Sprintf("(%s)[%d]判断合约类型失败(tx: %s, contract: %s): %s\n", r.chain.Name,
 				r.processBlockHeight, tx.Hash().Hex(), receipt.ContractAddress.Hex(), err)
+			fmt.Println(output)
 			return err
 		}
 
@@ -202,8 +209,9 @@ func (r *RecordBlock) analyzeTx(tx *types.Transaction) error {
 		case chainutils.Erc721:
 			err := r.recordErc721(receipt.ContractAddress, tx.Hash().Hex())
 			if err != nil {
-				fmt.Sprintf("(%s)[%d]保存合约失败(tx: %s, contract: %s, erc_type: %s): %s\n", r.chain.Name,
+				output := fmt.Sprintf("(%s)[%d]保存合约失败(tx: %s, contract: %s, erc_type: %s): %s\n", r.chain.Name,
 					r.processBlockHeight, tx.Hash().Hex(), receipt.ContractAddress.Hex(), "erc721", err)
+				fmt.Println(output)
 				return err
 			}
 			break
@@ -221,8 +229,9 @@ func (r *RecordBlock) recordErc721(address common.Address, tx string) error {
 	name, _ := instance.Name(&bind.CallOpts{})
 	symbol, _ := instance.Symbol(&bind.CallOpts{})
 	_, err := r.model.CreateNft(r.chain.ChainId, addr, "erc721", name, symbol, r.processBlockHeight.Uint64(), tx)
-	fmt.Sprintf("(%s)[%d]新收录(contract: %s, erc_type: %s, name: %s, symbol: %s)\n", r.chain.Name,
+	output := fmt.Sprintf("(%s)[%d]新收录(contract: %s, erc_type: %s, name: %s, symbol: %s)\n", r.chain.Name,
 		r.processBlockHeight, addr, "erc721", name, symbol)
+	fmt.Println(output)
 	return err
 }
 

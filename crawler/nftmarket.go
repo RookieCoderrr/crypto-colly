@@ -1,51 +1,27 @@
-package main
+package crawler
 
 import (
-	"context"
+	"crypto-colly/common/db"
 	"fmt"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/debug"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"gopkg.in/yaml.v3"
 	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
-type NFTInfo struct {
-	ContractHash string
-	Symbol string
-	TotalSupply float64
-	TotalHolders float64
-
+type NftMarket struct {
+	url string
+	db *db.Db
 }
 
-type Config struct {
-	Mongo_Local struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		User     string `yaml:"user"`
-		Pass     string `yaml:"pass"`
-		Database string `yaml:"database"`
-		DBName   string `yaml:"dbname"`
-	} `yaml:"mongo_local"`
+func NewNftMarket (url string, db *db.Db) *NftMarket{
+	return &NftMarket{
+		url:url,
+		db :db,
+	}
 }
-
-var (
-	pageReg = regexp.MustCompile("tokens-nft")
-	cfg,_  = OpenConfigFile()
-	ctx = context.TODO()
-)
-
-const  bscUrl = "https://bscscan.com/tokens-nft"
-
-func run () {
-	//result := make([]NFTInfo,5000)
-	co := initializeMongoLocalClient(ctx,cfg)
+func (n *NftMarket) crawl()  {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"),
 		colly.MaxDepth(2),
@@ -63,12 +39,6 @@ func run () {
 	c.OnHTML("body", func(e *colly.HTMLElement){
 		fmt.Println("body")
 		e.ForEach("table tr", func(_ int, el *colly.HTMLElement){
-			//tokenName := el.ChildText("td:nth-child(2) h3 div a")
-			//transfers24h := el.ChildText("td:nth-child(3)")
-			//transfers2d := el.ChildText("td:nth-child(4)")
-			//fmt.Println(tokenName)
-			//fmt.Println(transfers24h)
-			//fmt.Println(transfers2d)
 			detailURL := "https://bscscan.com"+el.ChildAttr("td:nth-child(2) h3 div a","href")
 			detailCollector.Visit(detailURL)
 
@@ -102,11 +72,7 @@ func run () {
 			TotalHolders :holders,
 		}
 		fmt.Println("raw:",raw)
-		insertOne, err := co.Database("crypto").Collection("token").InsertOne(ctx,raw)
-		if err != nil {
-			fmt.Println("Insert Error")
-		}
-		fmt.Println(insertOne)
+
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -117,34 +83,5 @@ func run () {
 		fmt.Println("Something went wrong:", err)
 	})
 
-	c.Visit(fmt.Sprintf("%s?p=%d", bscUrl, 1))
-}
-
-func initializeMongoLocalClient( ctx context.Context, cfg Config) *mongo.Client {
-	var clientOptions *options.ClientOptions
-	clientOptions = options.Client().ApplyURI("mongodb://" + cfg.Mongo_Local.Host + ":" + cfg.Mongo_Local.Port + "/" + cfg.Mongo_Local.Database)
-	cl, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		fmt.Println("connect mongo error")
-	}
-	err = cl.Ping(ctx, nil)
-	if err != nil {
-		fmt.Println("ping mongo error")
-	}
-	return cl
-}
-func OpenConfigFile() (Config, error) {
-	absPath, _ := filepath.Abs("config.yml")
-	f, err := os.Open(absPath)
-	if err != nil {
-		return Config{}, err
-	}
-	defer f.Close()
-	var cfg Config
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&cfg)
-	if err != nil {
-		return Config{}, err
-	}
-	return cfg, err
+	c.Visit(fmt.Sprintf("%s?p=%d", n.url, 1))
 }
