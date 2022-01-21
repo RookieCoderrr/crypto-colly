@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 )
@@ -31,8 +32,9 @@ type RecordBlock struct {
 	currentBlockHeight *big.Int
 	crawling           bool
 	startTime          time.Time
+	startPrefix        int
 }
-func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis) *RecordBlock{
+func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis,startPrefix int) *RecordBlock{
 	return &RecordBlock{
 		chain: chain,
 		db: db,
@@ -41,6 +43,7 @@ func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis) *Re
 		processBlockHeight: new(big.Int),
 		currentBlockHeight: new(big.Int),
 		startTime: time.Now(),
+		startPrefix: startPrefix,
 	}
 
 }
@@ -75,14 +78,26 @@ func (r *RecordBlock) getProcessedBlockHeight() (*big.Int, error) {
 		blockHeight = new(big.Int)
 		err         error
 	)
-
-	result, err := r.redis.Do("GET", ProcessBlockHeightPrefix+strings.ToLower(r.chain.Name))
+	result, err := r.redis.Do("GET", ProcessBlockHeightPrefix+strings.ToLower(r.chain.Name)+string(r.startPrefix))
 	if err != nil {
 		return blockHeight, err
 	}
-
 	if result == nil {
-		return blockHeight, nil
+		switch r.startPrefix {
+		case 1:
+			return big.NewInt(100000),nil
+		case 2:
+			return big.NewInt(200000),nil
+		case 3:
+			return big.NewInt(300000),nil
+		case 4:
+			return big.NewInt(400000),nil
+		case 5:
+			return big.NewInt(500000),nil
+		default:
+			fmt.Println("Exceed go runtime limit")
+			os.Exit(0)
+		}
 	}
 	//fmt.Println(123123213123123)
 	blockHeight.SetString(string(result.([]byte)), 10)
@@ -174,11 +189,14 @@ func (r *RecordBlock) crawl() {
 		if r.processBlockHeight.Cmp(r.currentBlockHeight) > 0 {
 			break
 		}
+		if r.processBlockHeight == big.NewInt(int64(r.startPrefix*100000)) {
+			os.Exit(0)
+		}
 	}
 	r.crawling = false
 }
 func (r *RecordBlock) saveProcessedBlockHeight(blockHeight *big.Int) error {
-	_, err := r.redis.Do("SET", ProcessBlockHeightPrefix+strings.ToLower(r.chain.Name), blockHeight.String())
+	_, err := r.redis.Do("SET", ProcessBlockHeightPrefix+strings.ToLower(r.chain.Name)+string(r.startPrefix), blockHeight.String())
 	fmt.Sprintf("Save block height: %d",blockHeight)
 	return err
 }

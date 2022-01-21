@@ -59,7 +59,7 @@ func (a *Api) Run() {
 		return
 	}
 	a.processProductId = lastProcessProductId
-	//a.processProductId = big.NewInt(0)
+	//a.processProductId = big.NewInt(22843297)
 	output := fmt.Sprintf("(%s)开始查询market，上次处理productId: %s\n", a.chain.Name, lastProcessProductId.String())
 	fmt.Println(output)
 

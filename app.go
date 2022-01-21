@@ -4,7 +4,7 @@ import (
 	"crypto-colly/common/db"
 	"crypto-colly/common/redis"
 	"crypto-colly/config"
-	"crypto-colly/crawler"
+	//"crypto-colly/crawler"
 	"crypto-colly/models"
 	"fmt"
 )
@@ -34,8 +34,10 @@ func (a *App) Do() {
 		ChainId: 1,
 		RPC: moralis_speedy_node,
 		}
-	//go NewRecordBlock(&blockchain, a.db, a.redis).Do()
-	go crawler.NewApi(&blockchain,bscDetailApi,bscListApi,a.db,a.redis).Run()
+	for i := 1; i < 6; i++ {
+		go NewRecordBlock(&blockchain, a.db, a.redis,i).Do()
+	}
+	//go crawler.NewApi(&blockchain,bscDetailApi,bscListApi,a.db,a.redis).Run()
 	//go crawler.NewNftMarket(bscUrl,a.db)
 	done := make(chan bool, 1)
 	for {
