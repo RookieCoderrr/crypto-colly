@@ -141,7 +141,7 @@ func (r *RecordBlock) crawl() {
 		fmt.Print("BlockTransactions:")
 		fmt.Println(block.Transactions())
 		for _, tx := range block.Transactions() {
-			output := fmt.Sprintf("Checking transaction: %s",tx.Data())
+			output := fmt.Sprintf("================================================"+"Checking transaction: %s",tx.Hash())
 			fmt.Println(output)
 			// 试试这个， to为空就当是合约判断
 			if tx.To() == nil {
