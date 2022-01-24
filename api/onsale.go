@@ -1,4 +1,4 @@
-package crawler
+package api
 
 import (
 	"bytes"
@@ -36,7 +36,7 @@ type Api struct {
 	startTime          time.Time
 }
 
-func NewApi(chain *models.Blockchain,detailurl string,listurl string, db *db.Db, redis *redis.Redis) *Api{
+func NewApi(chain *models.Blockchain,detailurl string,listurl string, db *db.Db, redis *redis.Redis) *Api {
 	return &Api{
 		chain: chain,
 		detailurl: detailurl,
@@ -157,11 +157,11 @@ func (a *Api)crawl(){
 		resp, err := client.Do(req)
 		body, _ := ioutil.ReadAll(resp.Body)
 		//fmt.Println(string(body))
-		//if gjson.Get(string(body),"success").Bool() == false {
-		//	output := fmt.Sprintf("(%s)获取当前productId失败: %s\n", a.chain.Name, err)
-		//	fmt.Println(output)
-		//	continue
-		//}
+		if gjson.Get(string(body),"success").Bool() == false {
+			output := fmt.Sprintf("(%s)获取当前productId失败: %s\n", a.chain.Name, err)
+			fmt.Println(output)
+			continue
+		}
 
 		contractHash := gjson.Get(string(body),"data.nftInfo.contractAddress").String()
 		filter := bson.M{"contract":contractHash}

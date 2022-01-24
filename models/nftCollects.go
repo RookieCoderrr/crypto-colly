@@ -20,13 +20,10 @@ func (n *NftModel) CreateNft(blockchainId int64, address, ercType, name, symbol 
 		BlockchainId:  blockchainId,
 		Contract:      address,
 		ErcType:       ercType,
-		Title:         name,
 		NFTName:       name,
 		NFTSymbol:     symbol,
 		BlockHeight:   blockHeight,
 		Tx:            tx,
-		IsAutoInclude: true,
-		Status:        1,
 		CreateTime:    time.Now().Unix(),
 		UpdateTime:    time.Now().Unix(),
 	}

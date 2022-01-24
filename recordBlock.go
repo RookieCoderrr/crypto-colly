@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"math/big"
-	"os"
 	"strings"
 	"time"
 )
@@ -83,23 +82,8 @@ func (r *RecordBlock) getProcessedBlockHeight() (*big.Int, error) {
 		return blockHeight, err
 	}
 	if result == nil {
-		switch r.startPrefix {
-		case 1:
-			return big.NewInt(100000),nil
-		case 2:
-			return big.NewInt(200000),nil
-		case 3:
-			return big.NewInt(300000),nil
-		case 4:
-			return big.NewInt(400000),nil
-		case 5:
-			return big.NewInt(500000),nil
-		default:
-			fmt.Println("Exceed go runtime limit")
-			os.Exit(0)
-		}
+		return  big.NewInt(int64(1000000 * r.startPrefix)),nil
 	}
-	//fmt.Println(123123213123123)
 	blockHeight.SetString(string(result.([]byte)), 10)
 	return blockHeight, nil
 }
@@ -135,7 +119,7 @@ func (r *RecordBlock) autoCrawl() {
 	for {
 		select {
 		case <-tick:
-			if !r.crawling && r.processBlockHeight.Cmp(r.currentBlockHeight) <= 0 {
+			if !r.crawling && r.processBlockHeight.Cmp(r.currentBlockHeight) <= 0 && r.processBlockHeight != big.NewInt(int64((r.startPrefix+1)*1000000)){
 				go r.crawl()
 			}
 		}
@@ -166,15 +150,6 @@ func (r *RecordBlock) crawl() {
 					continue
 				}
 			}
-
-			// 只有当tx data 足够大的时候，才被解析，否则跳过
-			//if len(tx.Data()) > 7000 {
-			//
-			//	err := a.analyzeTx(tx)
-			//	if err != nil {
-			//		continue
-			//	}
-			//}
 		}
 
 		err = r.saveProcessedBlockHeight(r.processBlockHeight)
@@ -190,7 +165,7 @@ func (r *RecordBlock) crawl() {
 			break
 		}
 		if r.processBlockHeight == big.NewInt(int64(r.startPrefix*100000)) {
-			os.Exit(0)
+			break
 		}
 	}
 	r.crawling = false
