@@ -20,7 +20,7 @@ func NewConfig(data interface{}) *Config{
 func (c *Config) Read(file string) error{
 	var err error
 	if err = c.ReadYaml(file); err != nil {
-		fmt.Println("real .yml config error",err)
+		fmt.Println("real .yml setting error",err)
 		return err
 	}
 	return nil
@@ -34,13 +34,13 @@ func (c *Config) ReadYaml(file string) error {
 
 	data, err = ioutil.ReadFile(file)
 	if err != nil {
-		fmt.Sprintf("Read yml config: %s",err)
+		fmt.Sprintf("Read yml setting: %s",err)
 		return err
 	}
 
 	err = yaml.Unmarshal([]byte(data), c.Data)
 	if err != nil {
-		fmt.Sprintf("Read yml config: %s",err)
+		fmt.Sprintf("Read yml setting: %s",err)
 		return err
 	}
 

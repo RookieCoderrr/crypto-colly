@@ -1,4 +1,4 @@
-package main
+package record
 
 import (
 	"context"
@@ -33,7 +33,7 @@ type RecordBlock struct {
 	startTime          time.Time
 	startPrefix        int
 }
-func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis,startPrefix int) *RecordBlock{
+func NewRecordBlock(chain *models.Blockchain, db *db.Db, redis *redis.Redis,startPrefix int) *RecordBlock {
 	return &RecordBlock{
 		chain: chain,
 		db: db,

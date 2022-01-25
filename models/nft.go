@@ -11,9 +11,24 @@ type NftModel struct {
 	conn *db.Db
 }
 
+type NFTCollect struct {
+	BlockchainId      int64  `json:"blockchain_id"`
+	Contract          string `json:"contract"`
+	CreateTime        int64  `json:"create_time"`
+	UpdateTime        int64  `json:"update_time"`
+	NFTName           string `json:"nft_name"`
+	NFTSymbol         string `json:"nft_symbol"`
+	ErcType           string `json:"erc_type"`
+	BlockHeight       uint64 `json:"block_height"`    // 发现块高
+	Tx                string `json:"tx"`              // 交易hash
+	MarketPlace       int    `json:"market_place"`
+	IsPopular         bool   `json:"is_popular"`
+}
+
 func NewNftModel(conn *db.Db) *NftModel{
 	return &NftModel{conn: conn}
 }
+
 
 func (n *NftModel) CreateNft(blockchainId int64, address, ercType, name, symbol string, blockHeight uint64, tx string) (int64, error) {
 	data := NFTCollect{

@@ -134,7 +134,7 @@ func initializeMongoLocalClient( ctx context.Context, cfg Config) *mongo.Client 
 	return cl
 }
 func OpenConfigFile() (Config, error) {
-	absPath, _ := filepath.Abs("config.yml")
+	absPath, _ := filepath.Abs("setting.yml")
 	f, err := os.Open(absPath)
 	if err != nil {
 		return Config{}, err
